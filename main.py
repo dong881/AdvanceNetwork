@@ -1,6 +1,64 @@
 import heapq
 
-# 節點圖結構 (已填寫詳細內容)
+# 儲存所有可能最短路徑的 Dijkstra 實現
+def enhanced_dijkstra(graph, start, end):
+    queue = [(0, start, [])]  # (累積距離, 當前節點, 路徑)
+    min_cost = float('inf')
+    shortest_paths = []  # 儲存所有可能最短路徑
+    visited = {}  # 節點 -> 最短距離
+
+    while queue:
+        cost, node, path = heapq.heappop(queue)
+
+        # 如果超過當前已知最短距離，跳過
+        if cost > min_cost:
+            continue
+
+        # 如果是新節點，或找到更短路徑，更新訪問紀錄
+        if node not in visited or cost <= visited[node]:
+            visited[node] = cost
+
+            # 如果到達終點
+            if node == end:
+                if cost < min_cost:
+                    min_cost = cost
+                    shortest_paths = [(cost, path)]
+                elif cost == min_cost:
+                    shortest_paths.append((cost, path))
+                continue
+
+            # 將鄰居加入隊列
+            for next_node, weight, path_name in graph.get(node, []):
+                heapq.heappush(queue, (cost + weight, next_node, path + [(node, next_node, path_name)]))
+
+    return shortest_paths
+
+
+# 尋找所有最短路徑（支持必經點）
+def find_all_shortest_paths(graph, start, end, must_pass_node=None):
+    if must_pass_node:
+        # 起點 -> 必經節點的所有最短路徑
+        to_mid_paths = enhanced_dijkstra(graph, start, must_pass_node)
+        # 必經節點 -> 終點的所有最短路徑
+        from_mid_paths = enhanced_dijkstra(graph, must_pass_node, end)
+
+        # 合併所有可能的路徑
+        all_paths = []
+        for to_cost, to_path in to_mid_paths:
+            for from_cost, from_path in from_mid_paths:
+                combined_cost = to_cost + from_cost
+                combined_path = to_path + from_path
+                all_paths.append((combined_cost, combined_path))
+
+        # 找出所有最短路徑
+        min_cost = min(path[0] for path in all_paths)
+        return [path for path in all_paths if path[0] == min_cost]
+    else:
+        # 無需必經點，直接尋找
+        return enhanced_dijkstra(graph, start, end)
+
+
+# 測試範例的圖
 graph = {
     'A': [('E', 4, 'a1'), ('B', 2, 'a2'), ('C', 2, 'a3')],
     'B': [('A', 2, 'b1'), ('C', 1, 'b2'), ('K', 7, 'b3'), ('F', 2, 'b4'), ('G', 7, 'b5'), ('E', 4, 'b6')],
@@ -15,87 +73,9 @@ graph = {
     'K': [('B', 7, 'k1'), ('F', 4, 'k2'), ('H', 2, 'k3'), ('I', 5, 'k4'), ('J', 2, 'k5')]
 }
 
-# 檢查圖結構對稱性
-def check_graph_symmetry(graph):
-    errors = []
-    for node, edges in graph.items():
-        for neighbor, distance, path_name in edges:
-            reverse_edges = graph.get(neighbor, [])
-            reverse_edge = next((e for e in reverse_edges if e[0] == node), None)
-            if not reverse_edge or reverse_edge[1] != distance:
-                errors.append((node, neighbor, distance))
-    return errors
-
-errors = check_graph_symmetry(graph)
-if errors:
-    print("圖結構檢查發現以下對稱性問題：")
-    for error in errors:
-        print(f"  節點 {error[0]} 到節點 {error[1]} 的距離 {error[2]} 不對稱！")
-else:
-    print("圖結構對稱性檢查通過！")
-
-
-# Dijkstra 演算法實現
-# 找最短路徑的函數已經在你的程式中完成，我們只需要確保清楚列出所有可能的最短路徑。
-def dijkstra_with_paths(graph, start, end, must_pass_node=None):
-    def find_paths(graph, start, end):
-        queue = [(0, start, [])]  # (累積距離, 當前節點, 路徑)
-        seen = set()
-        shortest_paths = []
-        min_cost = float('inf')
-
-        while queue:
-            (cost, node, path) = heapq.heappop(queue)
-
-            # 如果已超過目前最小距離，略過
-            if cost > min_cost:
-                continue
-
-            # 如果節點已被處理過，略過
-            if node in seen:
-                continue
-            seen.add(node)
-
-            # 如果抵達終點
-            if node == end:
-                if cost < min_cost:
-                    min_cost = cost
-                    shortest_paths = [(cost, path)]  # 找到更短的路徑，清空並添加
-                elif cost == min_cost:
-                    shortest_paths.append((cost, path))  # 同樣是最短路徑，添加到列表
-                continue
-
-            # 探索鄰居節點
-            for next_node, weight, path_name in graph.get(node, []):
-                if next_node not in seen:
-                    heapq.heappush(queue, (cost + weight, next_node, path + [(node, next_node, path_name)]))
-
-        return shortest_paths
-
-    # 如果有必須經過的節點
-    if must_pass_node:
-        to_mid_paths = find_paths(graph, start, must_pass_node)
-        from_mid_paths = find_paths(graph, must_pass_node, end)
-        all_paths = []
-
-        for to_cost, to_path in to_mid_paths:
-            for from_cost, from_path in from_mid_paths:
-                combined_cost = to_cost + from_cost
-                combined_path = to_path + from_path
-                all_paths.append((combined_cost, combined_path))
-
-        # 篩選最短的路徑
-        min_cost = min(path[0] for path in all_paths)
-        shortest_paths = [path for path in all_paths if path[0] == min_cost]
-        return shortest_paths
-
-    # 否則直接尋找最短路徑
-    return find_paths(graph, start, end)
-
-
-# 無限執行等待使用者輸入
+# 用戶交互
 while True:
-    print("\n請輸入必須經過的節點（例如 E），或輸入 'exit' 結束程式：")
+    print("\n請輸入必須經過的節點（例如 H），或輸入 'exit' 結束程式：")
     user_input = input("必須經過的節點: ").strip().upper()
 
     if user_input == 'EXIT':
@@ -111,7 +91,7 @@ while True:
     end_node = 'K'
     must_pass_node = user_input if user_input else None
 
-    shortest_paths = dijkstra_with_paths(graph, start_node, end_node, must_pass_node)
+    shortest_paths = find_all_shortest_paths(graph, start_node, end_node, must_pass_node)
 
     # 輸出結果
     print(f"\n從 {start_node} 到 {end_node} 的最短路徑 (經過 {must_pass_node if must_pass_node else '無特殊節點'})：")
