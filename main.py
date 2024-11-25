@@ -75,29 +75,37 @@ graph = {
 
 # 用戶交互
 while True:
-    print("\n請輸入必須經過的節點（例如 H），或輸入 'exit' 結束程式：")
-    user_input = input("必須經過的節點: ").strip().upper()
+    print("\n請輸入起點、必經點（可選）、終點（例如 A H K），或輸入 'exit' 結束程式：")
+    user_input = input("請輸入: ").strip().upper()
 
     if user_input == 'EXIT':
         print("程式結束，感謝使用！")
         break
 
-    if user_input and user_input not in graph:
-        print(f"節點 {user_input} 不存在於圖結構中，請重新輸入！")
+    nodes = user_input.split()
+    if len(nodes) == 2:
+        start_node, end_node = nodes
+        must_pass_node = None
+    elif len(nodes) == 3:
+        start_node, must_pass_node, end_node = nodes
+    else:
+        print("輸入格式錯誤，請確保輸入兩到三個節點（起點 必經點（可選） 終點）！")
         continue
 
-    # 計算最短路徑
-    start_node = 'A'
-    end_node = 'K'
-    must_pass_node = user_input if user_input else None
+    # 檢查節點是否存在於圖結構中
+    for node in (start_node, must_pass_node, end_node):
+        if node and node not in graph:
+            print(f"節點 {node} 不存在於圖結構中，請重新輸入！")
+            break
+    else:
+        # 計算最短路徑
+        shortest_paths = find_all_shortest_paths(graph, start_node, end_node, must_pass_node)
 
-    shortest_paths = find_all_shortest_paths(graph, start_node, end_node, must_pass_node)
-
-    # 輸出結果
-    print(f"\n從 {start_node} 到 {end_node} 的最短路徑 (經過 {must_pass_node if must_pass_node else '無特殊節點'})：")
-    for i, (cost, path) in enumerate(shortest_paths, start=1):
-        print(f"\n路徑選擇 {i}:")
-        print(f"  最短距離: {cost}")
-        print("  路徑詳情:")
-        for edge in path:
-            print(f"    {edge[0]} -> {edge[1]} via {edge[2]}")
+        # 輸出結果
+        print(f"\n從 {start_node} 到 {end_node} 的最短路徑 (經過 {must_pass_node if must_pass_node else '無特殊節點'})：")
+        for i, (cost, path) in enumerate(shortest_paths, start=1):
+            print(f"\n路徑選擇 {i}:")
+            print(f"  最短距離: {cost}")
+            print("  路徑詳情:")
+            for edge in path:
+                print(f"    {edge[0]} -> {edge[1]} via {edge[2]}")
